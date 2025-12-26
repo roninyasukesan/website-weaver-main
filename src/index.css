@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Lato:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 18%;
+
+    --primary: 217 28% 17%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 20% 95%;
+    --secondary-foreground: 217 28% 17%;
+
+    --muted: 217 20% 95%;
+    --muted-foreground: 217 15% 45%;
+
+    --accent: 145 63% 49%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 20% 88%;
+    --input: 217 20% 88%;
+    --ring: 217 28% 17%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens */
+    --hero-bg: 217 28% 17%;
+    --hero-secondary: 217 25% 22%;
+    --whatsapp: 145 63% 49%;
+    --whatsapp-hover: 145 63% 42%;
+    --gold: 40 50% 55%;
+
+    /* Font families */
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Lato', sans-serif;
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px rgba(30, 41, 56, 0.08);
+    --shadow-medium: 0 8px 30px rgba(30, 41, 56, 0.12);
+    --shadow-whatsapp: 0 4px 20px rgba(37, 211, 102, 0.4);
+  }
+
+  .dark {
+    --background: 217 28% 12%;
+    --foreground: 0 0% 95%;
+
+    --card: 217 28% 15%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 217 28% 15%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 0 0% 95%;
+    --primary-foreground: 217 28% 17%;
+
+    --secondary: 217 25% 22%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 217 25% 22%;
+    --muted-foreground: 217 15% 65%;
+
+    --accent: 145 63% 49%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 25% 25%;
+    --input: 217 25% 25%;
+    --ring: 0 0% 95%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+@layer components {
+  .section-padding {
+    @apply py-16 md:py-24 px-4 md:px-8;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 30px rgba(37, 211, 102, 0.6);
+  }
+}
