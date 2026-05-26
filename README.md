@@ -62,6 +62,19 @@ This project is built with:
 
 ## How can I deploy this project?
 
+### Via Vercel (Recommended)
+
+1. Push your code to GitHub (already done).
+2. Go to [Vercel](https://vercel.com/new).
+3. Import this repository.
+4. Configure the following **Environment Variables**:
+   - `VITE_SUPABASE_URL`: Your Supabase project URL.
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`: Your Supabase anon key.
+   - `OPENAI_API_KEY`: Your OpenAI API key (for AI features).
+5. Click **Deploy**.
+
+### Via Lovable
+
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
 ## Can I connect a custom domain to my Lovable project?
