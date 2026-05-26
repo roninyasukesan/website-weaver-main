@@ -56,9 +56,18 @@ export function WysiwygEditor({ content, onChange }: WysiwygEditorProps) {
     return null;
   }
 
+  const isValidUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:'].includes(parsed.protocol);
+    } catch {
+      return false;
+    }
+  };
+
   const addImage = () => {
     const url = window.prompt('URL da imagem:');
-    if (url) {
+    if (url && isValidUrl(url)) {
       editor.chain().focus().setImage({ src: url }).run();
     }
   };
@@ -76,7 +85,9 @@ export function WysiwygEditor({ content, onChange }: WysiwygEditorProps) {
       return;
     }
 
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    if (isValidUrl(url)) {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    }
   };
 
   return (

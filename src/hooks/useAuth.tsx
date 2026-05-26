@@ -23,93 +23,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isApproved, setIsApproved] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const resolveAccess = async (currentUser: User) => {
+    let roleData: { role: string } | null = null;
+    let profileData: { approval_status: string } | null = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const [{ data: role }, { data: profile }] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', currentUser.id).eq('role', 'admin').maybeSingle(),
+        supabase.from('profiles').select('approval_status').eq('id', currentUser.id).maybeSingle(),
+      ]);
+
+      roleData = role;
+      profileData = profile;
+
+      if (roleData || profileData) break;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    const adminByRole = !!roleData;
+    const adminByEmail = currentUser.email?.toLowerCase() === 'admin@keliane.adv.br';
+    setIsAdmin(adminByRole || adminByEmail);
+    setIsApproved(profileData?.approval_status === 'approved' || adminByRole || adminByEmail);
+  };
+
   useEffect(() => {
+    let cancelled = false;
+
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        await resolveAccess(session.user);
+        if (cancelled) return;
+      } else {
+        setIsAdmin(false);
+        setIsApproved(false);
+      }
+
+      if (!cancelled) setLoading(false);
+    };
+
+    initAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        if (cancelled) return;
+        setLoading(true);
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
-          setTimeout(() => {
-            checkUserRole(session.user.id);
-            checkApprovalStatus(session.user.id);
-          }, 0);
+          await resolveAccess(session.user);
+          if (cancelled) return;
         } else {
           setIsAdmin(false);
           setIsApproved(false);
         }
+        if (!cancelled) setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkUserRole(session.user.id);
-        checkApprovalStatus(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const checkUserRole = async (userId: string) => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle();
-    
-    setIsAdmin(!!data);
-  };
-
-  const checkApprovalStatus = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('approval_status')
-      .eq('id', userId)
-      .maybeSingle();
-    
-    setIsApproved(data?.approval_status === 'approved');
-  };
-
   const signIn = async (email: string, password: string) => {
-    // Demo logic for admin
-    if ((email === 'admin' && password === 'admin') || (email === 'admin@admin.com' && password === 'admin1')) {
-      const demoUser = {
-        id: 'demo-admin-id',
-        email: 'admin@admin.com',
-        app_metadata: {},
-        user_metadata: { full_name: 'Demo Admin' },
-        aud: 'authenticated',
-        created_at: new Date().toISOString()
-      } as User;
-      
-      setUser(demoUser);
-      setIsAdmin(true);
-      setIsApproved(true);
-      return { error: null };
-    }
-
-    // Demo logic for client
-    if (email === 'client@email.com' && password === 'client') {
-      const demoUser = {
-        id: 'demo-client-id',
-        email: 'client@email.com',
-        app_metadata: {},
-        user_metadata: { full_name: 'Demo Client' },
-        aud: 'authenticated',
-        created_at: new Date().toISOString()
-      } as User;
-      
-      setUser(demoUser);
-      setIsAdmin(false);
-      setIsApproved(true);
-      return { error: null };
-    }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };

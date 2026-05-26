@@ -8,39 +8,83 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
-import { Mail, Lock, User, Loader2, X } from 'lucide-react';
+import { Mail, Lock, User, Loader2, X, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
+
+const passwordSchema = z
+  .string()
+  .min(8, 'Senha deve ter pelo menos 8 caracteres')
+  .regex(/[A-Z]/, 'Senha deve conter pelo menos 1 letra maiúscula')
+  .regex(/[a-z]/, 'Senha deve conter pelo menos 1 letra minúscula')
+  .regex(/[0-9]/, 'Senha deve conter pelo menos 1 número')
+  .regex(/[^A-Za-z0-9]/, 'Senha deve conter pelo menos 1 caractere especial');
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  password: z.string().min(1, 'Senha é obrigatória'),
 });
 
 const signupSchema = z.object({
   fullName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  password: passwordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Senhas não coincidem',
   path: ['confirmPassword'],
 });
 
+function zodErrorMap(error: z.ZodError): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = issue.path.join('.') || 'form';
+    if (!out[key]) out[key] = issue.message;
+  }
+  return out;
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(true);
 
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginEmail, setLoginEmail] = useState(() => localStorage.getItem('lastLoginEmail') || '');
   const [loginPassword, setLoginPassword] = useState('');
+  const [loginTouched, setLoginTouched] = useState({ email: false, password: false });
 
   // Signup form state
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupTouched, setSignupTouched] = useState({
+    fullName: false,
+    email: false,
+    password: false,
+    confirmPassword: false,
+  });
+
+  const loginParsed = loginSchema.safeParse({
+    email: loginEmail.trim(),
+    password: loginPassword,
+  });
+  const loginErrors = loginParsed.success ? {} : zodErrorMap(loginParsed.error);
+  const loginCanSubmit = loginParsed.success && !loading;
+
+  const signupParsed = signupSchema.safeParse({
+    fullName: signupName.trim(),
+    email: signupEmail.trim(),
+    password: signupPassword,
+    confirmPassword: signupConfirmPassword,
+  });
+  const signupErrors = signupParsed.success ? {} : zodErrorMap(signupParsed.error);
+  const signupCanSubmit = signupParsed.success && !loading;
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -53,23 +97,34 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      loginSchema.parse({ email: loginEmail, password: loginPassword });
+      const normalizedEmail = loginEmail.trim();
+      loginSchema.parse({ email: normalizedEmail, password: loginPassword });
       
-      const { error } = await signIn(loginEmail, loginPassword);
+      const { error } = await signIn(normalizedEmail, loginPassword);
       
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
+        const msg = String(error.message || '');
+        const msgLower = msg.toLowerCase();
+        if (msgLower.includes('fetch') || msgLower.includes('network') || msgLower.includes('enotfound')) {
+          toast.error('Não foi possível conectar ao servidor. Verifique sua internet/DNS e tente novamente.');
+        } else if (msgLower.includes('email not confirmed') || msgLower.includes('email link is invalid')) {
+          toast.error('Seu email ainda não foi confirmado.');
+        } else if (msg.includes('Invalid login credentials')) {
           toast.error('Email ou senha incorretos');
         } else {
-          toast.error(error.message);
+          toast.error(msg);
         }
       } else {
+        if (rememberEmail) {
+          localStorage.setItem('lastLoginEmail', normalizedEmail);
+        }
         toast.success('Login realizado com sucesso!');
         navigate('/dashboard');
       }
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
+        setLoginTouched({ email: true, password: true });
       }
     } finally {
       setLoading(false);
@@ -81,20 +136,26 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      const normalizedName = signupName.trim();
+      const normalizedEmail = signupEmail.trim();
       signupSchema.parse({
-        fullName: signupName,
-        email: signupEmail,
+        fullName: normalizedName,
+        email: normalizedEmail,
         password: signupPassword,
         confirmPassword: signupConfirmPassword,
       });
 
-      const { error } = await signUp(signupEmail, signupPassword, signupName);
+      const { error } = await signUp(normalizedEmail, signupPassword, normalizedName);
 
       if (error) {
-        if (error.message.includes('already registered')) {
+        const msg = String(error.message || '');
+        const msgLower = msg.toLowerCase();
+        if (msgLower.includes('fetch') || msgLower.includes('network') || msgLower.includes('enotfound')) {
+          toast.error('Não foi possível conectar ao servidor. Verifique sua internet/DNS e tente novamente.');
+        } else if (msg.includes('already registered')) {
           toast.error('Este email já está cadastrado');
         } else {
-          toast.error(error.message);
+          toast.error(msg);
         }
       } else {
         toast.success('Conta criada! Aguarde a aprovação do administrador.');
@@ -103,6 +164,7 @@ export default function Auth() {
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
+        setSignupTouched({ fullName: true, email: true, password: true, confirmPassword: true });
       }
     } finally {
       setLoading(false);
@@ -164,10 +226,14 @@ export default function Auth() {
                       placeholder="seu@email.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
+                      onBlur={() => setLoginTouched((t) => ({ ...t, email: true }))}
                       className="pl-9"
                       required
                     />
                   </div>
+                  {loginTouched.email && loginErrors.email ? (
+                    <div className="text-xs text-destructive">{loginErrors.email}</div>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Senha</Label>
@@ -175,16 +241,36 @@ export default function Auth() {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-password"
-                      type="password"
+                      type={showLoginPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      className="pl-9"
+                      onBlur={() => setLoginTouched((t) => ({ ...t, password: true }))}
+                      className="pl-9 pr-10"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
+                  {loginTouched.password && loginErrors.password ? (
+                    <div className="text-xs text-destructive">{loginErrors.password}</div>
+                  ) : null}
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={rememberEmail}
+                    onChange={(e) => setRememberEmail(e.target.checked)}
+                    className="rounded"
+                  />
+                  Lembrar email
+                </label>
+                <Button type="submit" className="w-full" disabled={!loginCanSubmit}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Entrar
                 </Button>
@@ -203,10 +289,14 @@ export default function Auth() {
                       placeholder="Seu nome completo"
                       value={signupName}
                       onChange={(e) => setSignupName(e.target.value)}
+                      onBlur={() => setSignupTouched((t) => ({ ...t, fullName: true }))}
                       className="pl-9"
                       required
                     />
                   </div>
+                  {signupTouched.fullName && signupErrors.fullName ? (
+                    <div className="text-xs text-destructive">{signupErrors.fullName}</div>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
@@ -218,10 +308,14 @@ export default function Auth() {
                       placeholder="seu@email.com"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
+                      onBlur={() => setSignupTouched((t) => ({ ...t, email: true }))}
                       className="pl-9"
                       required
                     />
                   </div>
+                  {signupTouched.email && signupErrors.email ? (
+                    <div className="text-xs text-destructive">{signupErrors.email}</div>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
@@ -229,14 +323,25 @@ export default function Auth() {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-password"
-                      type="password"
+                      type={showSignupPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
-                      className="pl-9"
+                      onBlur={() => setSignupTouched((t) => ({ ...t, password: true }))}
+                      className="pl-9 pr-10"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
+                  {signupTouched.password && signupErrors.password ? (
+                    <div className="text-xs text-destructive">{signupErrors.password}</div>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-confirm">Confirmar Senha</Label>
@@ -244,16 +349,27 @@ export default function Auth() {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="signup-confirm"
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={signupConfirmPassword}
                       onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                      className="pl-9"
+                      onBlur={() => setSignupTouched((t) => ({ ...t, confirmPassword: true }))}
+                      className="pl-9 pr-10"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
+                  {signupTouched.confirmPassword && signupErrors.confirmPassword ? (
+                    <div className="text-xs text-destructive">{signupErrors.confirmPassword}</div>
+                  ) : null}
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={!signupCanSubmit}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Criar Conta
                 </Button>

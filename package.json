@@ -4,11 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "ai:check-env": "node -e \"const keys=[['OPENAI_API_KEY','OpenAI/Codex'],['GEMINI_API_KEY','Gemini API (AI Studio)'],['GOOGLE_API_KEY','Google API (Vertex/GenAI)'],['ANTHROPIC_API_KEY','Anthropic/Claude']]; const missing=[]; for (const [k,label] of keys){ const ok=!!process.env[k] && String(process.env[k]).trim().length>0; console.log(`${label}: ${ok?'OK':'MISSING'} (${k})`); if(!ok) missing.push(k); } process.exit(missing.length?1:0);\"",
+    "ai:claude": "node -e \"const {spawn}=require('node:child_process'); const fs=require('node:fs'); const path=require('node:path'); const home=path.join(process.cwd(), '.ai-home'); fs.mkdirSync(home,{recursive:true}); const env={...process.env, HOME:home, USERPROFILE:home}; spawn('npx',['-y','@anthropic-ai/claude-code'],{stdio:'inherit',shell:true,env});\"",
+    "ai:codex": "node -e \"const {spawn}=require('node:child_process'); const fs=require('node:fs'); const path=require('node:path'); const home=path.join(process.cwd(), '.ai-home'); const codexHome=path.join(home, 'codex'); fs.mkdirSync(codexHome,{recursive:true}); const env={...process.env, HOME:home, USERPROFILE:home, CODEX_HOME:codexHome}; spawn('npx',['-y','@openai/codex'],{stdio:'inherit',shell:true,env});\"",
+    "ai:gemini": "node -e \"const {spawn}=require('node:child_process'); const fs=require('node:fs'); const path=require('node:path'); const home=path.join(process.cwd(), '.ai-home'); fs.mkdirSync(home,{recursive:true}); const env={...process.env, HOME:home, USERPROFILE:home}; spawn('npx',['-y','@google/gemini-cli'],{stdio:'inherit',shell:true,env});\"",
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:demo": "node scripts/create-demo-users.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -49,6 +54,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.4.2",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.26",
     "input-otp": "^1.4.2",

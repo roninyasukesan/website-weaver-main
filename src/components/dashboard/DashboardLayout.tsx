@@ -39,6 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { href: '/dashboard', label: 'Painel', icon: LayoutDashboard },
     { href: '/dashboard/processes', label: 'Meus Processos', icon: FileText },
     { href: '/dashboard/documents', label: 'Documentos', icon: Upload },
+    { href: '/dashboard/templates', label: 'Gerar Documentos', icon: FileText },
   ];
 
   const adminNavItems = [

@@ -166,7 +166,7 @@ export function AdminClients() {
                         {client.full_name || 'Sem nome'}
                       </TableCell>
                       <TableCell>{client.email}</TableCell>
-                      <TableCell>{client.phone || '-'}</TableCell>
+                      <TableCell>{client.phone ? `***${client.phone.slice(-2)}` : '-'}</TableCell>
                       <TableCell>
                         <Badge variant={approvalLabels[client.approval_status]?.variant || 'secondary'}>
                           {approvalLabels[client.approval_status]?.label || client.approval_status}
