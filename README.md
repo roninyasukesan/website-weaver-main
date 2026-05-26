@@ -64,14 +64,19 @@ This project is built with:
 
 ### Via Vercel (Recommended)
 
+... (instruções da vercel) ...
+
+### Via Netlify
+
 1. Push your code to GitHub (already done).
-2. Go to [Vercel](https://vercel.com/new).
-3. Import this repository.
-4. Configure the following **Environment Variables**:
-   - `VITE_SUPABASE_URL`: Your Supabase project URL.
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`: Your Supabase anon key.
-   - `OPENAI_API_KEY`: Your OpenAI API key (for AI features).
-5. Click **Deploy**.
+2. Vá para o [Netlify Dashboard](https://app.netlify.com/start).
+3. Conecte seu repositório do GitHub.
+4. O Netlify detectará automaticamente o arquivo `netlify.toml` que eu criei.
+5. Configure as **Environment Variables** (Site settings > Build & deploy > Environment):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - `OPENAI_API_KEY`
+6. Clique em **Deploy site**.
 
 ### Via Lovable
 
